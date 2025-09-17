@@ -12,6 +12,7 @@ export const sendMessage = async (req, res) => {
     const newMessage = await Message.create({ from, to, message });
     io.emit("receive_message", newMessage);
     res.status(201).json(newMessage);
+      console.log("Message createdAt:", newMessage.createdAt);
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
