@@ -14,7 +14,7 @@ const secureRoute = async (req, res, next) => {
     next();
   } catch (err) {
     console.log("JWT Error:", err.message);
-    return res.status(401).json({ error: "Invalid token" }); // ❌ 500 → ✅ 401
+    return res.status(401).json({ error: "Invalid token" });
   }
 };
 
