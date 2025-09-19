@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 app.use(
   cors({
-    origin: "https://your-frontend.vercel.app", // replace with your frontend URL
+    origin: ["https://chat-z89o.vercel.app", "http://localhost:3000", "http://localhost:3001"],
     credentials: true,
   })
 );
