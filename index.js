@@ -11,7 +11,13 @@ import messageRouter from "./routes/message.routes.js";
 
 dotenv.config();
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    origin: "https://your-frontend.vercel.app", // replace with your frontend URL
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(cookieParser());
 
