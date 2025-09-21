@@ -11,13 +11,27 @@ import messageRouter from "./routes/message.routes.js";
 
 dotenv.config();
 const app = express();
+// ✅ Allow both localhost (dev) and Vercel (prod)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://chat-z89o.vercel.app",
+];
+
 app.use(
   cors({
-    origin: ["https://chat-z89o.vercel.app", "http://localhost:3000", "http://localhost:3001"],
-    credentials: true,
+    origin: function (origin, callback) {
+      // allow requests with no origin like mobile apps or Postman
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `CORS policy: This origin (${origin}) is not allowed`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // ✅ allow cookies
   })
 );
-
 app.use(express.json());
 app.use(cookieParser());
 
