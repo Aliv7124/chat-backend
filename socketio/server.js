@@ -3,43 +3,45 @@ import http from "http";
 import express from "express";
 
 const app = express();
-
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
     origin: [
-      "http://localhost:3001", // dev frontend
-      "https://your-vercel-frontend.vercel.app" // deployed frontend
+      "http://localhost:5173",               // desktop dev
+      "http://192.168.x.x:5173",             // mobile dev (LAN IP)
+      "https://chat-z89o.vercel.app",        // deployed frontend
     ],
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
   },
 });
 
+const users = {}; // store userId => socket.id
 
-// realtime message code goes here
-export const getReceiverSocketId = (receiverId) => {
-  return users[receiverId];
-};
-
-const users = {};
-
-// used to listen events on server side.
 io.on("connection", (socket) => {
-  console.log("a user connected", socket.id);
-  const userId = socket.handshake.query.userId;
+  const userId = socket.handshake.auth?.userId; // use auth instead of query
   if (userId) {
     users[userId] = socket.id;
-    console.log("Hello ", users);
+    console.log("User connected:", userId, socket.id);
   }
-  // used to send the events to all connected users
+
+  // Emit online users to everyone
   io.emit("getOnlineUsers", Object.keys(users));
 
-  // used to listen client side events emitted by server side (server & client)
+  // Listen to send_message event from client
+  socket.on("send_message", ({ to, message }) => {
+    const receiverSocketId = users[to];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("receive_message", message);
+    }
+  });
+
+  // On disconnect
   socket.on("disconnect", () => {
-    console.log("a user disconnected", socket.id);
-    delete users[userId];
+    if (userId) delete users[userId];
     io.emit("getOnlineUsers", Object.keys(users));
+    console.log("User disconnected:", socket.id);
   });
 });
 

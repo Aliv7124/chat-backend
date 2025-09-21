@@ -1,3 +1,4 @@
+// middleware/secureRoute.js
 import jwt from "jsonwebtoken";
 import User from "../model/user.model.js";
 
@@ -13,7 +14,6 @@ const secureRoute = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.log("JWT Error:", err.message);
     return res.status(401).json({ error: "Invalid token" });
   }
 };
