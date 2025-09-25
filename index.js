@@ -11,27 +11,26 @@ import messageRouter from "./routes/message.routes.js";
 
 dotenv.config();
 const app = express();
-// ✅ Allow both localhost (dev) and Vercel (prod)
+
+// Allowed frontend origins
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://chat-z89o.vercel.app",
+  "http://localhost:5173",           // dev
+  "https://chat-z89o.vercel.app",   // deployed frontend
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin like mobile apps or Postman
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = `CORS policy: This origin (${origin}) is not allowed`;
-        return callback(new Error(msg), false);
+      if (!origin) return callback(null, true); // allow Postman, mobile apps
+      if (!allowedOrigins.includes(origin)) {
+        return callback(new Error(`CORS policy: This origin (${origin}) is not allowed`), false);
       }
       return callback(null, true);
     },
-    credentials: true, // ✅ allow cookies
+    credentials: true, // allow cookies/auth
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -47,17 +46,38 @@ mongoose
 
 // HTTP + Socket.IO server
 const server = http.createServer(app);
-export const io = new Server(server, { cors: { origin: "*" } });
+
+// ✅ Socket.IO with proper CORS for credentials
+export const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+const onlineUsers = {}; // userId => socket.id
 
 io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
+  const userId = socket.handshake.auth?.userId;
+  if (userId) {
+    onlineUsers[userId] = socket.id;
+    io.emit("getOnlineUsers", Object.keys(onlineUsers));
+    console.log("User connected:", userId, socket.id);
+  }
 
-  socket.on("send_message", (data) => {
-    io.emit("receive_message", data);
+  // Listen to messages
+  socket.on("send_message", ({ to, message }) => {
+    const receiverSocketId = onlineUsers[to];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("receive_message", message);
+    }
   });
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
+    if (userId) delete onlineUsers[userId];
+    io.emit("getOnlineUsers", Object.keys(onlineUsers));
+    console.log("User disconnected:", socket.id);
   });
 });
 
